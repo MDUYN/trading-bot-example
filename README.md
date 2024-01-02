@@ -1,5 +1,5 @@
-# How to build a trading bot in 4 steps
-Would you like to build your own trading bot but do not know where to start?  You have come to the right place. 
+# How to build a trading bot in 5 steps
+Would you like to build your own trading bot but do not know where to start? You have come to the right place. 
 In this guide we will walk you through the four steps of building a trading bot, and get you started with automated trading!
 
 > All source code for this blog can be found [here](https://github.com/MDUYN/trading-bot-example).
@@ -78,7 +78,7 @@ When the fast moving average crosses above the slow moving average, we buy. When
 below the slow moving average, we sell.
 
 In order to implement this strategy we need to use the market data that we have retrieved from the exchange. We will
-use the OHLCV (candlestick) data to calculate the moving averagesand we will use ticker data to get the most recent price of bitcoin.
+use the OHLCV (candlestick) data to calculate the moving averages and we will use ticker data to get the most recent price of bitcoin.
 
 > This code uses tulipy to calculate the moving averages. Tulipy is a Python binding for the technical analysis library (tulipindicators)[https://tulipindicators.org/].
 
@@ -217,13 +217,14 @@ class GoldenCrossDeathCrossTradingStrategy(TradingStrategy):
                 )
 ```
 
-## 2.4 Testing our trading strategy
+# 3 Testing our trading strategy
 Now that we have implemented our trading strategy we can test it. To test our strategy we will use the
 backtesting functionality of the investing algorithm framework. This allows us to test our strategy on historical data.
 
 Create a new file called `backtest.py` and add the following code:
 
 ```python
+import sys
 from datetime import datetime
 
 from investing_algorithm_framework import PortfolioConfiguration, \
@@ -231,26 +232,48 @@ from investing_algorithm_framework import PortfolioConfiguration, \
 
 from app import app
 
+
+def convert_to_datetime(datetime_str):
+    try:
+        return datetime.strptime(datetime_str, "%Y-%m-%d")
+    except ValueError:
+        print(f"Error: Invalid datetime format for '{datetime_str}'. Please use the format 'YYYY-MM-DD HH:MM:SS'")
+        sys.exit(1)
+
+
 app.add_portfolio_configuration(
     PortfolioConfiguration(
-        market="bitvavo",
+        market="BITVAVO",
         trading_symbol="EUR",
         initial_balance=400
     )
 )
 
 if __name__ == "__main__":
-    start_date = datetime(2023, 1, 1)
-    end_date = datetime(2023, 12, 1)
+
+    if len(sys.argv) != 3:
+        print(
+            "Error: Please provide two datetime "
+            "strings as command-line arguments."
+        )
+        sys.exit(1)
+
+    # Get datetime strings from command-line arguments
+    start_date_str = sys.argv[1]
+    end_date_str = sys.argv[2]
+
+    # Convert datetime strings to datetime objects
+    start_date = convert_to_datetime(start_date_str)
+    end_date = convert_to_datetime(end_date_str)
     backtest_report = app.backtest(
         start_date=start_date,
         end_date=end_date,
-        pending_order_check_interval="1d"
+        pending_order_check_interval="2h"
     )
     pretty_print_backtest(backtest_report)
 ```
 
-Running this code will give us the following output:
+Running this code will give you the following output:
 
 ```bash
 $ python backtest 2023-01-01 2023-12-30
@@ -283,7 +306,7 @@ $ python backtest 2023-01-01 2023-12-30
 .... All trades overview
 ```
 
-As you can see this trading strategy is profitable with a profit rate of 17% on its closed trades. 
+As you can see this trading strategy is profitable with a growth rate of 17% on its closed trades. 
 When creating a trading strategy its also very important to run the strategy on a time range that was considered to be a market downturn for you selected 
 assets. This will help you determine if your trading strategy is robust enough to handle market downturns.
 
@@ -324,7 +347,7 @@ $ python backtest 2021-11-11 2022-11-11
 As you can see this trading strategy is not profitable with a profit rate of -4% on its closed trades.
 We will try to improve it in the next section. The important thing to note here is that our trading strategy is not robust enough to handle market downturns. 
 
-## 3 Improving our trading strategy
+## 4 Improving our trading strategy
 In the previous section we saw that our trading bot was not profitable. In this section we will try to improve our trading strategy.
 Whenever creating a trading bot you should always experiment with different metrics and parameters. In this section we will try to improve 
 our trading strategy by making the following changes:
@@ -334,7 +357,7 @@ our trading strategy by making the following changes:
 - Changing out fast moving average from a simple moving average to an exponential moving average, which will give more weight to the most recent prices.
 
 
-We will add a trend line (100sma) and change the fast sma (simple moving average) to a fast ema (exponential moving average).
+First, we will add a trend line (100sma) and change the fast sma (simple moving average) to a fast ema (exponential moving average).
 
 ```python
 class ImprovedGoldenCrossDeathCrossTradingStrategy(TradingStrategy):
@@ -370,60 +393,60 @@ class ImprovedGoldenCrossDeathCrossTradingStrategy(TradingStrategy):
             .... Remaining code
 ```
 
-Finally, we add the checks for the buy and sell signals.
+Finally, we change the sell and buy triggers:
 
 ```python
-    def apply_strategy(self, algorithm: Algorithm, market_data: dict):
+def apply_strategy(self, algorithm: Algorithm, market_data: dict):
 
-        for symbol in self.symbols:
-            target_symbol = symbol.split('/')[0]
+    for symbol in self.symbols:
+        target_symbol = symbol.split('/')[0]
 
-            # Don't open a new order when we already have an open order
-            if algorithm.has_open_orders(target_symbol):
-                continue
+        # Don't open a new order when we already have an open order
+        if algorithm.has_open_orders(target_symbol):
+            continue
 
-            ohlcv_data = market_data[f"{symbol}-ohlcv"]
-            df = pd.DataFrame(
-                ohlcv_data,
-                columns=['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']
-            )
-            fast = tp.sma(df["Close"].to_numpy(), period=9)
-            # Changed fast sma to fast ema
-            slow = tp.ema(df["Close"].to_numpy(), period=50)
-            # Calculate trend line
-            trend = tp.sma(df["Close"].to_numpy(), period=100)
-            price = market_data[f"{symbol}-ticker"]["bid"]
+        ohlcv_data = market_data[f"{symbol}-ohlcv"]
+        df = pd.DataFrame(
+            ohlcv_data,
+            columns=['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']
+        )
+        fast = tp.sma(df["Close"].to_numpy(), period=9)
+        # Changed fast sma to fast ema
+        slow = tp.ema(df["Close"].to_numpy(), period=50)
+        # Calculate trend line
+        trend = tp.sma(df["Close"].to_numpy(), period=100)
+        price = market_data[f"{symbol}-ticker"]["bid"]
+        
+        # Sell when crossunder with trend
+        if algorithm.has_position(target_symbol) \
+                and is_crossunder(fast, trend):
+            algorithm.close_position(target_symbol)
             
-            # Sell when crossunder with trend
-            if algorithm.has_position(target_symbol) \
-                    and is_crossunder(fast, trend):
-                algorithm.close_position(target_symbol)
-                
-            # Only buy when crossover
-            elif not algorithm.has_position(target_symbol) \
-                    and is_crossover(fast, slow) \
-                algorithm.create_limit_order(
-                    target_symbol=target_symbol,
-                    order_side=OrderSide.BUY,
-                    price=price,
-                    percentage_of_portfolio=25,
-                    precision=4
-                )
+        # Only buy when crossover
+        elif not algorithm.has_position(target_symbol) \
+                and is_crossover(fast, slow) \
+            algorithm.create_limit_order(
+                target_symbol=target_symbol,
+                order_side=OrderSide.BUY,
+                price=price,
+                percentage_of_portfolio=25,
+                precision=4
+            )
 
-            # Checking manual stopp losses with a 6% stop loss
-            open_trades = algorithm.get_open_trades(target_symbol)
+        # Checking manual stopp losses with a 6% stop loss
+        open_trades = algorithm.get_open_trades(target_symbol)
 
-            for open_trade in open_trades:
-                filtered_df = df[open_trade.opened_at <= df['Datetime']]
-                close_prices = filtered_df['Close'].tolist()
-                current_price = market_data[f"{symbol}-ticker"]
+        for open_trade in open_trades:
+            filtered_df = df[open_trade.opened_at <= df['Datetime']]
+            close_prices = filtered_df['Close'].tolist()
+            current_price = market_data[f"{symbol}-ticker"]
 
-                if open_trade.is_manual_stop_loss_trigger(
-                    prices=close_prices,
-                    current_price=current_price["bid"],
-                    stop_loss_percentage=6
-                ):
-                    algorithm.close_trade(open_trade)
+            if open_trade.is_manual_stop_loss_trigger(
+                prices=close_prices,
+                current_price=current_price["bid"],
+                stop_loss_percentage=6
+            ):
+                algorithm.close_trade(open_trade)
 ```
 
 When we run this trading strategy for the same time period as before 
@@ -492,12 +515,12 @@ $ python backtest.py 2023-01-01 2023-12-30
 ```
 
 
-## 4 Deploying our trading bot
+## 5 Deploying our trading bot
 To deploy our trading bot we will create an azure function that will run our trading bot every 2 hours. Before we start, 
 please make sure you have the following installed and configured:
 
-- You need to have a Microsoft Azure account to deploy the trading bot. You can create a free account [here](https://azure.microsoft.com/en-us/free/).
-- You also need to have the Azure CLI installed. You can find the installation instructions [here](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli).
+- You need to have a Microsoft Azure account to deploy the trading bot. You can create a free account [here](https://azure.microsoft.com/en-us/free/). 
+- You also need to have the Azure CLI installed. You can find the installation instructions[here](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli).
 - You also need to have azure function core tools installed. You can find the installation instructions [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=windows%2Cisolated-process%2Cnode-v4%2Cpython-v2%2Chttp-trigger%2Ccontainer-apps&pivots=programming-language-csharp#install-the-azure-functions-core-tools).
 - Make sure you are logged in to Azure with the Azure CLI. You can do this by running the following command:
 ```bash
@@ -565,7 +588,7 @@ def trading_bot_azure_function(myTimer: func.TimerRequest) -> None:
 ```
 
 Next we create a bash script called `create_resources.sh` and paste the 
-following content in it. This script will create the necessary resources in azure for our trading bot.
+following content in it. This script will create the necessary resources on azure for our trading bot.
 
 ```bash
 # Variables, you can change these if you want
@@ -602,7 +625,7 @@ az functionapp config appsettings set \
   --settings AzureWebJobsStorage=$storageConnectionString
 ```
 
-Nextup we use the azure functools to deploy our trading bot to azure.
+Nextup we can use the azure functools to deploy our trading bot to azure.
 ```bash
 func azure functionapp publish trading-bot-function-app
 ```
@@ -610,10 +633,10 @@ func azure functionapp publish trading-bot-function-app
 If everything went well you should see all the resources in your azure portal 
 and the trading bot should be running every 2 hours on the azure function.
 
-## 5 Conclusion
+## 6 Conclusion
 In this tutorial we have shown you how to build a trading bot with the investing algorithm framework.
 We have also shown you how to test your trading bot and how to make some small improvements to let your trading bot perform better.
-Finally we have shown you how to deploy your trading bot to azure.
+Finally, we have shown you how to deploy your trading bot to azure.
 
 I hope you have enjoyed this tutorial and that you have learned something new. Please let me know if you have any questions or feedback. If 
 you would like to learn more about the investing algorithm framework you can check out the [documentation](https://investing-algorithm-framework.com/) also
