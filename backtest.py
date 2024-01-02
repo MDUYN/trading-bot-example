@@ -1,8 +1,8 @@
-from datetime import datetime
 import sys
+from datetime import datetime
 
 from investing_algorithm_framework import PortfolioConfiguration, \
-    pretty_print_backtest, MarketCredential
+    pretty_print_backtest
 
 from app import app
 
