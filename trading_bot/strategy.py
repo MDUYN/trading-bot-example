@@ -6,9 +6,9 @@ from investing_algorithm_framework import TimeUnit, \
 
 def is_crossover(fast_series, slow_series):
     """
-    Expect df to have columns: Date, ma_<period_one>, ma_<period_two>.
-    With the given date time it will check if the ma_<period_one> is a
-    crossover with the ma_<period_two>
+    Expect two numpy series (fast and slow).
+    With the given series it will check if the fast has a crossover with the
+    slow series
     """
 
     return fast_series[-2] <= slow_series[-2] \
@@ -17,9 +17,9 @@ def is_crossover(fast_series, slow_series):
 
 def is_crossunder(fast_series, slow_series):
     """
-    Expect df to have columns: Date, ma_<period_one>, ma_<period_two>.
-    With the given date time it will check if the ma_<period_one> is a
-    crossover with the ma_<period_two>
+    Expect two numpy series (fast and slow).
+    With the given series it will check if the fast has a crossunder with the
+    slow series
     """
 
     return fast_series[-2] >= slow_series[-2] \
